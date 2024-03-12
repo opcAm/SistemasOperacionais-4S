@@ -1,4 +1,4 @@
-# EXERCÍCIO 1
+# Exercício 1
 ## *Amanda Oliveira Pires Conde  RA: 10409108*
 
 ## Você é capaz de identificar os trechos executados por pai e filho?
