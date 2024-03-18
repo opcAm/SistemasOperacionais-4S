@@ -9,67 +9,68 @@
 #include <stdio.h>
 #include <string.h>
 
-#define STACK_SIZE 1024*64
 
-// Estrutura que faz a troca de dados entre o processo pai e a thread
-typedef struct threadData {
-    char info[100]; // Buffer para guardar a informação
-} SubroutineData;
+#define FIBER_STACK 1024*64
 
-// funcao executada pela nova thread
-int subroutine(void* arg) {
-    // Transforma o argumento para o tipo correto (threadData*)
-    threadData* sharedData = (threadData*)arg;
-    // Exibe a msg recebida do processo principal
-    printf("thread: Lendo informação do processo principal: '%s'\n", sharedData->info);
+// Estrutura para troca de dados entre o processo pai e a thread
+typedef struct ThreadData {
+    char message[100]; // Buffer para armazenar a mensagem
+} ThreadData;
 
-    // Modifica msg pra enviar pro processo pai
-    strcpy(sharedData->info, "bom dia paizao");
-    // Anuncia a finalização da threas
-    printf("thread: Finalizando\n");
-    return 0; // Retorna sucesso
+// Função que será executada pela thread
+int threadFunction(void* argument) {
+    // Converte o argumento para o tipo correto (ThreadData*)
+    ThreadData* data = (ThreadData*)argument;
+    // Exibe a mensagem recebida do processo pai
+    printf("Thread: lendo mensagem do processo pai: '%s'\n", data->message);
+
+    // Atualiza a mensagem para enviar de volta ao processo pai
+    strcpy(data->message, "Bom dia paizäo");
+    // Informa que a thread está saindo
+    printf("Thread: saindo\n");
+    return 0; // Retorna 0 indicando sucesso
 }
 
-// Função principal
+// Função principal do programa
 int main() {
-    void* stack; // Ponteiro para a stack da thread
-    pid_t pid; // Identificador do processo da thread
-    SubroutineData sharedData; 
+    void* stack; // Ponteiro para a pilha da thread
+    pid_t pid; // PID da thread criada
+    ThreadData data; // Estrutura para comunicação
 
-    // Reserva espaço para a stack da thread
-    stack = malloc(STACK_SIZE);
+    // Aloca memória para a pilha da thread
+    stack = malloc(FIBER_STACK);
     if (stack == 0) {
-        perror("malloc: erro ao alocar stack");
-        exit(1); // Finaliza se não conseguir alocar
+        perror("malloc: could not allocate stack");
+        exit(1); // Termina o programa se a alocação falhar
     }
 
-    // Define a informação a ser enviada para a sub-rotina
-    strcpy(sharedData.info, "bom dia, filhotao");
+    // Prepara a mensagem a ser enviada para a thread
+    strcpy(data.message, "Bom dia filhotäo");
 
-    // Indica a criação da thread
-    printf("Iniciando thread filho\n");
-    // Cria a thread com a chamada clone
-    // Passa a função threadFunction, o topo da pilha, flags e a estrutura de dados como argumento
-    pid = clone(&subroutine, (char*)stack + STACK_SIZE,
-                SIGCHLD | CLONE_FS | CLONE_FILES | CLONE_SIGHAND | CLONE_VM, &sharedData);
+    // Exibe uma mensagem indicando a criação da thread
+    printf("Criando thread filho\n");
+    // Cria a thread usando a chamada clone
+    // Passa a função threadFunction, o topo da pilha, flags e a estrutura de dados como argumentos
+    pid = clone(&threadFunction, (char*)stack + FIBER_STACK,
+                SIGCHLD | CLONE_FS | CLONE_FILES | CLONE_SIGHAND | CLONE_VM, &data);
     if (pid == -1) {
         perror("clone");
-        exit(2); // Finaliza se a criação da thread falhar
+        exit(2); // Termina o programa se a criação da thread falhar
     }
 
-    // Aguarda o término da thread
+    // Espera pela finalização da thread
     pid = waitpid(pid, NULL, 0);
     if (pid == -1) {
         perror("waitpid");
-        exit(3); // Finaliza se a espera falhar
+        exit(3); // Termina o programa se a espera falhar
     }
 
-    // Lê a informação alterada pela thread
-    printf("Processo principal lendo informação modificada: '%s'\n", sharedData.info);
+    // Lê a mensagem modificada pela thread
+    printf("Processo pai lendo mensagem modificada: '%s'\n", data.message);
 
-    // Libera o espaço da stack da thread
+    // Libera a memória alocada para a pilha da thread
     free(stack);
-    // Informa o término da thread e a liberação da stack
-    printf("thread filho concluída e stack liberada.\n");
-    return 0; // Indica sucesso
+    // Informa que a thread terminou e a memória foi liberada
+    printf("Thread filho retornou e a stack foi liberada.\n");
+    return 0; // Retorna 0 indicando sucesso
 }
