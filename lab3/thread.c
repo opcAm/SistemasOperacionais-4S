@@ -14,7 +14,7 @@
 
 // Estrutura para troca de dados entre o processo pai e a thread
 typedef struct ThreadData {
-    char message[100]; // Buffer para armazenar a mensagem
+    char message[100]; // Buffer para armazenar a mensagem (buffer armazena dados temporariamente)
 } ThreadData;
 
 // Função que será executada pela thread
@@ -25,13 +25,12 @@ int threadFunction(void* argument) {
     printf("Thread: lendo mensagem do processo pai: '%s'\n", data->message);
 
     // Atualiza a mensagem para enviar de volta ao processo pai
-    strcpy(data->message, "Bom dia paizäo");
+    strcpy(data->message, "bom dia paizao");
     // Informa que a thread está saindo
     printf("Thread: saindo\n");
-    return 0; // Retorna 0 indicando sucesso
+    return 0;
 }
 
-// Função principal do programa
 int main() {
     void* stack; // Ponteiro para a pilha da thread
     pid_t pid; // PID da thread criada
@@ -41,11 +40,11 @@ int main() {
     stack = malloc(FIBER_STACK);
     if (stack == 0) {
         perror("malloc: could not allocate stack");
-        exit(1); // Termina o programa se a alocação falhar
+        exit(1); // Termina o programa se falhar
     }
 
     // Prepara a mensagem a ser enviada para a thread
-    strcpy(data.message, "Bom dia filhotäo");
+    strcpy(data.message, "bom dia filhotao");
 
     // Exibe uma mensagem indicando a criação da thread
     printf("Criando thread filho\n");
@@ -55,18 +54,18 @@ int main() {
                 SIGCHLD | CLONE_FS | CLONE_FILES | CLONE_SIGHAND | CLONE_VM, &data);
     if (pid == -1) {
         perror("clone");
-        exit(2); // Termina o programa se a criação da thread falhar
+        exit(2);
     }
 
     // Espera pela finalização da thread
     pid = waitpid(pid, NULL, 0);
     if (pid == -1) {
         perror("waitpid");
-        exit(3); // Termina o programa se a espera falhar
+        exit(3); 
     }
 
     // Lê a mensagem modificada pela thread
-    printf("Processo pai lendo mensagem modificada: '%s'\n", data.message);
+    printf("Processo pai lendo mensagem alterada: '%s'\n", data.message);
 
     // Libera a memória alocada para a pilha da thread
     free(stack);
