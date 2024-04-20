@@ -25,4 +25,9 @@ Comparando as implementações com threads e processos para controlar o acesso �
 
 
 ## Processos
+![image](https://github.com/opcAm/SistemasOperacionais-4S/assets/134961931/d0bfdb95-8391-4317-8a6a-c68e110189be)
+
+## Threads
+![image](https://github.com/opcAm/SistemasOperacionais-4S/assets/134961931/64b8d7c9-16ec-4d88-b3aa-450af5e8311c)
+
 
