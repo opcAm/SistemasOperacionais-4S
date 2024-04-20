@@ -19,3 +19,10 @@ A garantia de que apenas uma direção está ativa de cada vez é assegurada pel
 ### 3. Discorra sobre as diferenças entre as implementações utilizando threads e processos e diga qual foi mais eficiente na solução do problema, justificando sua resposta.
 
 Comparando as implementações com threads e processos para controlar o acesso à escada rolante, a abordagem com threads se destaca pela eficiência. Threads compartilham memória e sincronizam variáveis globais rapidamente, resultando em menos overhead e uma resposta mais ágil. Por outro lado, processos exigem comunicação via pipes, introduzindo atrasos e complexidade, além de consumirem mais recursos devido ao isolamento de memória. Portanto, para este caso específico, a implementação com threads é mais eficiente, proporcionando um controle de concorrência mais direto e eficaz.
+
+
+### Execuções
+
+
+## Processos
+
