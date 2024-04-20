@@ -1,104 +1,109 @@
-#include <stdio.h>
 #include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-// Define matrizes para armazenar os tempos de chegada das pessoas para cada direção
-int tempos_chegada[2][10000];
-// Vetor para armazenar a quantidade de pessoas em cada direção
-int contadores_direcoes[2] = {0, 0};
-// Variável para armazenar a direção atual de operação da escada
-int direcao_atual;
-// Variável para armazenar o tempo atual no contexto da execução da escada
-int tempo_atual;
-// Variável para armazenar o tempo final de execução após processar todos os passageiros
-int tempo_final;
+typedef struct {
+  int timeOfArrival;
+  int directionOfTravel;
+} Traveler;
 
-// Função executada pela thread que simula a operação da escada rolante
-void *escada_rolante() {
+int globalClock = 0;
+int trafficDirection = 0;
+int countOfTravelers = 0;
+int operationDuration = 0;
 
-  // Variável para armazenar a direção oposta à direção atual
-  int direcao_oposta;
-  // Vetor para armazenar o índice atual de processamento em cada direção
-  int indices[2] = {0, 0};
-  // Variável para manter registro do último tempo em que uma pessoa começou a usar a escada
-  int ultimo_tempo_partida = 0;
+void *manageTraffic(void *data) {
+  Traveler *travelersQueue = (Traveler *)data;
 
-  // Define o tempo inicial com base no primeiro passageiro na direção inicial
-  tempo_atual = tempos_chegada[direcao_atual][0];
+  trafficDirection = travelersQueue[0].directionOfTravel;
+  operationDuration = travelersQueue[0].timeOfArrival + 10;
 
-  // Processa enquanto houver pessoas em qualquer uma das direções
-  while (indices[0] < contadores_direcoes[0] || indices[1] < contadores_direcoes[1]) {
-    // Calcula a direção oposta
-    direcao_oposta = 1 - direcao_atual;
-    
-    // Verifica se a pessoa atual pode partir no tempo registrado
-    int partida_valida = tempos_chegada[direcao_atual][indices[direcao_atual]] <= ultimo_tempo_partida;
+  int travelerIndex = 0;
+  int handledTravelers = 0;
+  Traveler nextTraveler;
 
-    if (partida_valida) {
-      // Atualiza o tempo atual com o tempo de chegada da pessoa sendo processada
-      tempo_atual = tempos_chegada[direcao_atual][indices[direcao_atual]];
-      // Incrementa o índice para a direção atual
-      indices[direcao_atual]++;
-    } 
-    else {
-      // Define o novo tempo atual baseado no maior entre o último tempo de partida e a chegada da próxima pessoa na direção oposta
-      int proximo_tempo_partida_oposta = tempos_chegada[direcao_oposta][indices[direcao_oposta]];
-      tempo_atual = (ultimo_tempo_partida > proximo_tempo_partida_oposta) ? ultimo_tempo_partida : proximo_tempo_partida_oposta;
-      // Incrementa o índice para a direção oposta
-      indices[direcao_oposta]++;
+  while (1) {
+    if (globalClock == operationDuration) {
+      trafficDirection = 1 - trafficDirection;
+      if (nextTraveler.directionOfTravel == trafficDirection) {
+        operationDuration += 10;
+        handledTravelers++;
+      }
     }
 
-    // Atualiza o último tempo de partida adicionando 10 segundos ao tempo atual
-    ultimo_tempo_partida = tempo_atual + 10;
-    // Alterna a direção atual para a próxima iteração
-    direcao_atual = 1 - direcao_atual;
+    if (globalClock == travelersQueue[travelerIndex].timeOfArrival) {
+      if (trafficDirection == travelersQueue[travelerIndex].directionOfTravel) {
+        if (travelersQueue[travelerIndex].timeOfArrival <= operationDuration) {
+          operationDuration = travelersQueue[travelerIndex].timeOfArrival + 10;
+          handledTravelers++;
+        }
+        travelerIndex++;
+      } else {
+        nextTraveler = travelersQueue[travelerIndex];
+        travelerIndex++;
+      }
+    }
+
+    globalClock++;
+    if (handledTravelers == countOfTravelers) {
+      break;
+    }
   }
 
-  // Define o tempo final adicionando 10 segundos ao último tempo de partida
-  tempo_final = ultimo_tempo_partida + 10;
+  return NULL;
 }
 
 int main() {
-
-  // Abre o arquivo de entrada para leitura
-  FILE *arquivo_entrada, *arquivo_saida;
-  arquivo_entrada = fopen("input.txt", "r");
-  if (arquivo_entrada == NULL) {
-    printf("Erro ao abrir o arquivo de entrada.\n");
-    return 0;
+  FILE *inputStream = fopen("input.txt", "r");
+  if (!inputStream) {
+    fprintf(stderr, "Error opening the input file\n");
+    return EXIT_FAILURE;
   }
 
-  // Lê o número de pessoas e armazena os tempos de chegada e direções
-  int numero_pessoas, tempo, direcao_entrada;
-  fscanf(arquivo_entrada, "%d", &numero_pessoas);
+  if (fscanf(inputStream, "%d", &countOfTravelers) != 1) {
+    fprintf(stderr, "Error reading the number of travelers\n");
+    fclose(inputStream);
+    return EXIT_FAILURE;
+  }
 
-  for (int i = 0; i < numero_pessoas; i++) {
-    fscanf(arquivo_entrada, "%d %d", &tempo, &direcao_entrada);
-    if (i == 0) {
-      direcao_atual = direcao_entrada; // Define a direção inicial baseada na primeira pessoa
+  Traveler *travelers = malloc(countOfTravelers * sizeof(Traveler));
+  if (!travelers) {
+    fprintf(stderr, "Memory allocation failed for travelers\n");
+    fclose(inputStream);
+    return EXIT_FAILURE;
+  }
+
+  for (int i = 0; i < countOfTravelers; i++) {
+    if (fscanf(inputStream, "%d %d", &travelers[i].timeOfArrival, &travelers[i].directionOfTravel) != 2) {
+      fprintf(stderr, "Error reading traveler data at index %d.\n", i + 1);
+      fclose(inputStream);
+      free(travelers);
+      return EXIT_FAILURE;
     }
-    tempos_chegada[direcao_entrada][contadores_direcoes[direcao_entrada]] = tempo;
-    contadores_direcoes[direcao_entrada]++;
   }
 
-  // Fecha o arquivo de entrada após a leitura
-  fclose(arquivo_entrada);
+  fclose(inputStream);
 
-  // Cria uma thread para processar a simulação da escada rolante
-  pthread_t thread_id;
-  pthread_create(&thread_id, NULL, escada_rolante, NULL);
-  pthread_join(thread_id, NULL);
-
-  // Abre o arquivo de saída para escrever o resultado da simulação
-  arquivo_saida = fopen("output.txt", "w");
-  if (arquivo_saida == NULL) {
-    printf("Erro ao abrir o arquivo de saída.\n");
-    return 0;
+  pthread_t trafficThread;
+  if (pthread_create(&trafficThread, NULL, manageTraffic, travelers) != 0) {
+    fprintf(stderr, "Failed to create the thread\n");
+    free(travelers);
+    return EXIT_FAILURE;
   }
 
-  // Escreve o tempo final no arquivo de saída
-  fprintf(arquivo_saida, "%d\n", tempo_final);
-  // Fecha o arquivo de saída
-  fclose(arquivo_saida);
+  pthread_join(trafficThread, NULL);
+  free(travelers);
 
-  return 0;
+  FILE *outputStream = fopen("output.txt", "w");
+  if (!outputStream) {
+    fprintf(stderr, "Error opening the output file\n");
+    return EXIT_FAILURE;
+  }
+
+  fprintf(outputStream, "%d\n", operationDuration);
+  fclose(outputStream);
+
+  printf("%d\n", operationDuration);
+  
+  return EXIT_SUCCESS;
 }
