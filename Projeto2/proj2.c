@@ -40,7 +40,6 @@ void *transferir(void *args) {
         t->recebe->saldo = t->recebe->saldo + t->valor;
         printf("%s - Saldo Posterior: $%d,00\n", t->recebe->nome, t->recebe->saldo);
 
-        // Incrementa a contagem de transações bem-sucedidas
         (*(t->contador))++;
     } else {
         printf("Saldo Insuficiente\n");
@@ -61,8 +60,48 @@ int main(void) {
     pthread_mutex_init(&semaforo, NULL);
 
     int totalDeTransacoes = 10;
-    int transacoes_sucesso = 0; // Contador de transações bem-sucedidas
+    int transacoes_sucesso = 0; 
     int totalDeLoops = totalDeTransacoes / 100 + (totalDeTransacoes % 100 != 0);
     int count = 0;
+    
+    for (int i = 0; i < totalDeLoops; i++) {
+        pthread_t thread_id[100];
 
+        for (int j = 0; j < 100; j++) {
+            if (count >= totalDeTransacoes) {
+                break;
+            }
+
+            transacao *t = (transacao *)malloc(sizeof(transacao));
+            int n = rand() % 2;
+            if (n == 0) {
+                t->envia = &conta1;
+                t->recebe = &conta2;
+            } else {
+                t->envia = &conta2;
+                t->recebe = &conta1;
+            }
+            t->valor = rand() % 500 + 1;
+            t->contador = &transacoes_sucesso;
+
+            pthread_create(&thread_id[j], NULL, transferir, (void *)t);
+            count++;
+        }
+
+        for (int j = 0; j < 100; j++) {
+            if (j < count) {
+                pthread_join(thread_id[j], NULL);
+            }
+        }
+    }
+
+    pthread_mutex_destroy(&semaforo);
+
+    printf("---------------------------------------\n");
+    printf("Total de Transações Tentadas: %d\n", totalDeTransacoes);
+    printf("Total de Transações Bem-sucedidas: %d\n", transacoes_sucesso);
+    printf("Saldo final da %s: $%d,00\n", conta1.nome, conta1.saldo);
+    printf("Saldo final da %s: $%d,00\n", conta2.nome, conta2.saldo);
+
+    return 0;
 }
